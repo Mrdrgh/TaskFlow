@@ -5,6 +5,7 @@ import {JwtPayload} from "../middleware/auth.middleware"
 import Task from "../models/task.model";
 import User from "../models/user.model";
 import {constants} from "../constants";
+import { Types } from "mongoose";
 
 export const getTasks = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -68,7 +69,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const task = Task.create({
+        let task = await Task.create({
             title,
             description,
             status: status || constants.task.STATUS_DEFAULT,
@@ -77,7 +78,8 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
             assignedTo: req.user?._id
         });
 
-        (await task).populate('assignedTo', 'name email');
+        task = await Task.populate('assignedAt', constants.task.ASSIGNED_TO_POPULATION_POLICY)
+
 
         res.status(201).json({
             data: task
@@ -92,7 +94,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
 // @route PUT /api/tasks/:id
 export const updateTask = async (req: Request, res: Response): Promise<void> => {
     try {
-        const task = await Task.findById(req.params.id)
+        let task = await Task.findById(req.params.id)
 
         if (!task) {
             res.status(404).json({
@@ -106,7 +108,7 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        task.updateOne(req.body, {new: true, runValidators: true}).populate('assignedTo', 'name email');
+        task = await Task.findByIdAndUpdate(req.params.id, req.body, {new: true, runValidators: true}).populate(constants.task.ASSIGNED_TO_POPULATION_POLICY);
         res.json({
             data: task
         });
