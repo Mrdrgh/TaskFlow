@@ -5,12 +5,16 @@ import connectDB from './config/db';
 import { uptime } from 'process';
 import authRouter from './routes/auth.routes';
 import taskRouter from './routes/task.routes';
-
+import { initializeSocket } from './config/socket';
+import { createServer } from "http"
 dotenv.config();
 connectDB();
 
 const app: Application = express();
 
+const httpServer = createServer(app);
+//socket io server
+const io = initializeSocket(httpServer);
 //middleware
 app.use(cors());
 app.use(express.json());
@@ -35,6 +39,6 @@ app.use('/api/tasks', taskRouter);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

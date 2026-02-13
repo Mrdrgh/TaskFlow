@@ -1,7 +1,7 @@
 import { Server as HTTPServer} from "http";
 import { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
-import { JwtPayload } from "../middleware/auth.middleware";
+import { JwtPayload, SocketAuthenticate } from "../middleware/auth.middleware";
 import User from "../models/user.model";
 
 export interface AuthenticatedSocket extends Socket {
@@ -23,6 +23,30 @@ export const initializeSocket = (httpServer: HTTPServer): Server => {
         },
     });
 
-    io.use()
+    io.use(SocketAuthenticate);
 
+
+    io.on("connection", (socket: AuthenticatedSocket) => {
+        console.log(`User connected: ${socket.user?._id} (${socket.id})`);
+
+        socket.join(`user:${socket.user?._id}`);
+
+        socket.emit('connected', {
+            message: 'connected to TaskFlow',
+            user: socket.user
+        });
+
+        socket.on("disconnect", () => {
+            console.log(`user disconnected ${socket.user?._id} (${socket.id})`);
+        });
+    })
+
+    return io;
 }
+
+export const getIO = (): Server => {
+    if (!io) {
+        throw new Error('Socket.io not initialized');
+    }
+    return io;
+};
