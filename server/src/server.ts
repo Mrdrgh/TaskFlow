@@ -16,7 +16,7 @@ const httpServer = createServer(app);
 //socket io server
 const io = initializeSocket(httpServer);
 //middleware
-app.use(cors());
+app.use(cors({origin: "http://localhost:5500"}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {console.log(`resolving request for path : ${req.method} ${req.url} ${req.body}`); next();})
@@ -38,7 +38,6 @@ app.use('/api/auth', authRouter);
 app.use('/api/tasks', taskRouter);
 
 const PORT = process.env.PORT || 5000;
-
 httpServer.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.io Test</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>Socket.io Connection Test</h1>
+  <div id="status">Disconnected</div>
+  <div id="messages"></div>
+
+  <script>
+    // REPLACE WITH YOUR ACTUAL TOKEN FROM LOGIN
+    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5OGRjMmQ5YzhjOGM1NDY4N2UxOTYwMSIsImlhdCI6MTc3MDk4MDc4M30.nBHp4bAJ-0ZDALayd-sLddoDSkn9ade1mAVqxVjpAk0';
+
+    const socket = io('http://localhost:5000', {
+      auth: { token }
+    });
+
+    socket.on('connect', () => {
+      document.getElementById('status').textContent = 'Connected!';
+      console.log('Connected:', socket.id);
+    });
+
+    socket.on('connected', (data) => {
+      console.log('Welcome:', data);
+      document.getElementById('messages').innerHTML += 
+        `<p>Welcome: ${data.user.name}</p>`;
+    });
+
+    socket.on('task:created', (data) => {
+      console.log('Task created:', data);
+      document.getElementById('messages').innerHTML += 
+        `<p>Task created: ${data.task.title}</p>`;
+    });
+
+    socket.on('task:updated', (data) => {
+      console.log('Task updated:', data);
+      document.getElementById('messages').innerHTML += 
+        `<p>Task updated: ${data.task.title}</p>`;
+    });
+
+    socket.on('task:deleted', (data) => {
+      console.log('Task deleted:', data);
+      document.getElementById('messages').innerHTML += 
+        `<p>Task deleted: ${data.taskId}</p>`;
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error.message);
+      document.getElementById('status').textContent = 
+        'Error: ' + error.message;
+    });
+
+    socket.on('disconnect', () => {
+      document.getElementById('status').textContent = 'Disconnected';
+      console.log('Disconnected');
+    });
+  </script>
+</body>
+</html>

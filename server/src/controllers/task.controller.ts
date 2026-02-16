@@ -6,6 +6,7 @@ import Task from "../models/task.model";
 import User from "../models/user.model";
 import {constants} from "../constants";
 import { Types } from "mongoose";
+import { getIO } from "../config/socket";
 
 export const getTasks = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -80,7 +81,8 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
 
         task = await Task.populate('assignedAt', constants.task.ASSIGNED_TO_POPULATION_POLICY)
 
-
+        const io = getIO();
+        io.to(`user:${req.user?._id}`).emit('task:created', {task, message: "New task created"});
         res.status(201).json({
             data: task
         });
@@ -109,6 +111,8 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
         }
 
         task = await Task.findByIdAndUpdate(req.params.id, req.body, {new: true, runValidators: true}).populate(constants.task.ASSIGNED_TO_POPULATION_POLICY);
+        const io = getIO();
+        io.to(`user:${req.user._id}`).emit('task:updated', {task, message: `task ${task?.title} updated`});
         res.json({
             data: task
         });
@@ -134,7 +138,10 @@ export const deleteTask = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
+        const io = getIO();
+        io.to(`user:${req.user._id}`).emit("task:deleted", {taskId: req.params.id, message: "task deleted"});
         await task.deleteOne();
+
     } catch(error: any) {
         console.error(error.trace);
         res.status(500).json({
