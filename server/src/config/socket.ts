@@ -55,6 +55,7 @@ export const initializeSocket = (httpServer: HTTPServer): Server => {
         socket.on("disconnect", () => {
             connectedUsers.splice(connectedUsers.indexOf(socket.user?._id as string), 1)
             console.log(`user disconnected ${socket.user?._id} (${socket.id})`);
+            subscription.unsubscribe();
         });
     })
 
