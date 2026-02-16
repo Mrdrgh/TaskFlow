@@ -3,7 +3,7 @@ import { map, filter} from "rxjs/operators"
 
 export enum EventType {
     TASK_CREATED = 'task:created',
-    TASK_UPDATE = 'task:updated',
+    TASK_UPDATED = 'task:updated',
     TASK_DELETED = 'task:deleted',
     TASK_STATUS_CHANGED = 'task:status_changed',
     TASK_PRIORITY_CHANGED = 'task:priority_changed'

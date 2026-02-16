@@ -7,6 +7,7 @@ import User from "../models/user.model";
 import {constants} from "../constants";
 import { Types } from "mongoose";
 import { getIO } from "../config/socket";
+import { eventService, EventType } from "../services/event.service";
 
 export const getTasks = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -82,6 +83,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
         task = await Task.populate('assignedAt', constants.task.ASSIGNED_TO_POPULATION_POLICY)
 
         const io = getIO();
+        eventService.emit(EventType.TASK_CREATED, req.user!._id.toString(), task);
         io.to(`user:${req.user?._id}`).emit('task:created', {task, message: "New task created"});
         res.status(201).json({
             data: task
@@ -110,7 +112,18 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
+        const isStatusNew = task.status === req.body.status ? req.body.status : null;
+        const isPriorityNew = task.priority === req.body.priority ? req.body.priority : null;
+
         task = await Task.findByIdAndUpdate(req.params.id, req.body, {new: true, runValidators: true}).populate(constants.task.ASSIGNED_TO_POPULATION_POLICY);
+        eventService.emit(EventType.TASK_UPDATED, req.user._id.toString(), task);
+
+        if (isStatusNew) {
+            eventService.emit(EventType.TASK_STATUS_CHANGED, req.user._id.toString(), task);
+        }
+        if (isPriorityNew) {
+            eventService.emit(EventType.TASK_PRIORITY_CHANGED, req.user._id.toString(), task);
+        }
         const io = getIO();
         io.to(`user:${req.user._id}`).emit('task:updated', {task, message: `task ${task?.title} updated`});
         res.json({
@@ -139,6 +152,7 @@ export const deleteTask = async (req: Request, res: Response): Promise<void> => 
         }
 
         const io = getIO();
+        eventService.emit(EventType.TASK_DELETED, req.user._id.toString(), task);
         io.to(`user:${req.user._id}`).emit("task:deleted", {taskId: req.params.id, message: "task deleted"});
         await task.deleteOne();
 

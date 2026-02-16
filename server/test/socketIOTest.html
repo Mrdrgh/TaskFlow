@@ -3,59 +3,157 @@
 <head>
   <title>Socket.io Test</title>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    #status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .connected {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .disconnected {
+      background-color: #f44336;
+      color: white;
+    }
+    #messages {
+      border: 1px solid #ddd;
+      padding: 10px;
+      min-height: 200px;
+      margin-top: 20px;
+      border-radius: 5px;
+    }
+    .message {
+      padding: 8px;
+      margin: 5px 0;
+      border-left: 3px solid #2196F3;
+      background-color: #f0f0f0;
+    }
+    .create { border-left-color: #4CAF50; }
+    .update { border-left-color: #FF9800; }
+    .delete { border-left-color: #f44336; }
+    .status { border-left-color: #9C27B0; }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0b7dda;
+    }
+  </style>
 </head>
 <body>
-  <h1>Socket.io Connection Test</h1>
-  <div id="status">Disconnected</div>
+  <h1>🚀 Socket.io + RxJS Real-Time Test</h1>
+  
+  <div>
+    <label>JWT Token:</label>
+    <input type="text" id="tokenInput" placeholder="Paste your JWT token here">
+    <button onclick="connectSocket()">Connect</button>
+  </div>
+
+  <div id="status" class="disconnected">Disconnected</div>
+  
+  <h2>Real-Time Messages:</h2>
   <div id="messages"></div>
 
   <script>
-    // REPLACE WITH YOUR ACTUAL TOKEN FROM LOGIN
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5OGRjMmQ5YzhjOGM1NDY4N2UxOTYwMSIsImlhdCI6MTc3MDk4MDc4M30.nBHp4bAJ-0ZDALayd-sLddoDSkn9ade1mAVqxVjpAk0';
+    let socket = null;
 
-    const socket = io('http://localhost:5000', {
-      auth: { token }
-    });
+    function connectSocket() {
+      const token = document.getElementById('tokenInput').value;
+      
+      if (!token) {
+        alert('Please enter a JWT token');
+        return;
+      }
 
-    socket.on('connect', () => {
-      document.getElementById('status').textContent = 'Connected!';
-      console.log('Connected:', socket.id);
-    });
+      if (socket) {
+        socket.disconnect();
+      }
 
-    socket.on('connected', (data) => {
-      console.log('Welcome:', data);
-      document.getElementById('messages').innerHTML += 
-        `<p>Welcome: ${data.user.name}</p>`;
-    });
+      socket = io('http://localhost:5000', {
+        auth: { token }
+      });
 
-    socket.on('task:created', (data) => {
-      console.log('Task created:', data);
-      document.getElementById('messages').innerHTML += 
-        `<p>Task created: ${data.task.title}</p>`;
-    });
+      socket.on('connect', () => {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = `Connected! (Socket ID: ${socket.id})`;
+        statusDiv.className = 'connected';
+        addMessage('success', 'Connected to server');
+      });
 
-    socket.on('task:updated', (data) => {
-      console.log('Task updated:', data);
-      document.getElementById('messages').innerHTML += 
-        `<p>Task updated: ${data.task.title}</p>`;
-    });
+      socket.on('connected', (data) => {
+        console.log('Welcome data:', data);
+        addMessage('info', `Welcome! Connected via RxJS Event Stream`);
+      });
 
-    socket.on('task:deleted', (data) => {
-      console.log('Task deleted:', data);
-      document.getElementById('messages').innerHTML += 
-        `<p>Task deleted: ${data.taskId}</p>`;
-    });
+      socket.on('task:created', (payload) => {
+        console.log('Task created:', payload);
+        addMessage('create', `📝 Task Created: ${payload.data.title}`);
+      });
 
-    socket.on('connect_error', (error) => {
-      console.error('Connection error:', error.message);
-      document.getElementById('status').textContent = 
-        'Error: ' + error.message;
-    });
+      socket.on('task:updated', (payload) => {
+        console.log('Task updated:', payload);
+        addMessage('update', `✏️ Task Updated: ${payload.data.title}`);
+      });
 
-    socket.on('disconnect', () => {
-      document.getElementById('status').textContent = 'Disconnected';
-      console.log('Disconnected');
-    });
+      socket.on('task:deleted', (payload) => {
+        console.log('Task deleted:', payload);
+        addMessage('delete', `🗑️ Task Deleted: ${payload.data.title}`);
+      });
+
+      socket.on('task:status_changed', (payload) => {
+        console.log('Task status changed:', payload);
+        addMessage('status', 
+          `🔄 Status Changed: ${payload.data.task.title} 
+          (${payload.data.oldStatus} → ${payload.data.newStatus})`
+        );
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('Connection error:', error.message);
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = `Error: ${error.message}`;
+        statusDiv.className = 'disconnected';
+        addMessage('error', `Connection failed: ${error.message}`);
+      });
+
+      socket.on('disconnect', () => {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = 'Disconnected';
+        statusDiv.className = 'disconnected';
+        addMessage('error', 'Disconnected from server');
+      });
+    }
+
+    function addMessage(type, text) {
+      const messagesDiv = document.getElementById('messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      messageDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong> - ${text}`;
+      messagesDiv.insertBefore(messageDiv, messagesDiv.firstChild);
+    }
+
+    addMessage('info', '👋 Welcome! RxJS Event Bus is now processing events');
   </script>
 </body>
 </html>
