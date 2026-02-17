@@ -34,7 +34,7 @@ export const initializeSocket = (httpServer: HTTPServer): Server => {
     io.on("connection", (socket: AuthenticatedSocket) => {
         if (connectedUsers && connectedUsers.includes(socket.user?._id as string)) {
             console.log(`Socket session (${socket.id}) cannot be established for user ${socket.user?._id}: this user already has an active socket session`);
-            return;
+            //return;
         }
         console.log(`User connected: ${socket.user?._id} (${socket.id})`);
 

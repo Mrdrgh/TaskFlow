@@ -80,7 +80,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
             assignedTo: req.user?._id
         });
 
-        task = await Task.populate('assignedAt', constants.task.ASSIGNED_TO_POPULATION_POLICY)
+        task = await task.populate('assignedTo', constants.task.ASSIGNED_TO_POPULATION_POLICY)
 
         const io = getIO();
         eventService.emit(EventType.TASK_CREATED, req.user!._id.toString(), task);

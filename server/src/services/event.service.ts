@@ -1,5 +1,6 @@
 import { Subject, Observable } from "rxjs";
-import { map, filter} from "rxjs/operators"
+import { map, filter, tap, bufferTime, debounceTime, scan} from "rxjs/operators"
+import { buffer } from "stream/consumers";
 
 export enum EventType {
     TASK_CREATED = 'task:created',
@@ -16,6 +17,12 @@ export interface AppEvent {
     timestamp: Date;
 }
 
+export interface ActivitySummary {
+    userId: string;
+    count: number;
+    events: AppEvent[];
+    period: string;
+}
 class EventService {
     private eventStream$ = new Subject<AppEvent>();
 
@@ -38,9 +45,8 @@ class EventService {
     getUserEvents(userId: string): Observable<AppEvent> {
         return this.eventStream$.pipe(
             filter((event) => event.userId === userId),
-            map((event) => {
-                console.log(`User ${userId} recieving ${event.type}`);
-                return event;
+            tap((event) =>{
+                console.log(`EventBus User ${userId} recieving: ${event.type}`)
             })
         );
     }
@@ -57,6 +63,46 @@ class EventService {
             filter((event) => event.type.startsWith('task:'))
         );
     }
+
+
+    // advanced ops
+    getDebouncedEvents(userId: string, debounceMS: number = 500): Observable<AppEvent> {
+        return this.getUserEvents(userId).pipe(
+            debounceTime(debounceMS),
+            tap((event) => {
+                console.log(`EventBus Debounced event after ${debounceMS}`, event.type);
+            }) 
+        );
+    }
+
+    getBufferedEvents(userId: string, bufferMS: number = 500): Observable<AppEvent[]> {
+        return this.getUserEvents(userId).pipe(
+            bufferTime(bufferMS),
+            filter((events) => events.length > 0),
+            tap((events) => {console.log(`EventBus Buffered ${events.length} events in ${bufferMS} ms`)})
+        )
+    }
+
+    getActivitySummary(userId: string): Observable<ActivitySummary> {
+        return this.getUserEvents(userId).pipe(
+            scan((acc: ActivitySummary, event: AppEvent) => {
+                return {
+                    userId: event.userId,
+                    count: acc.count + 1,
+                    events: [...acc.events, event].slice(-10),
+                    period: `${acc.events[0]?.timestamp || event.timestamp}`
+                };
+            }, {
+                userId,
+                count: 0,
+                events: [],
+                period: ''
+            }),
+            tap((summary) => {
+                console.log(`EventBus Activity Summary: ${summary.count} events for user : ${userId}`)
+            })
+        );
+    };
 }
 
 
